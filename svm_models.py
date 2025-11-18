@@ -203,9 +203,7 @@ class KNNSVM(NaiveSVM):
     def _compute_knn_weights(self, X, y):
 
         n_samples = X.shape[0]
-        nn = NearestNeighbors(n_neighbors=self.k + 1, metric=self.metric)
-        nn.fit(X)
-        distances, indices = nn.kneighbors(X)
+        distances, indices = self.nn_.kneighbors(X)
 
         # Exclude the point itself (first neighbor)
         distances = distances[:, 1:]
@@ -247,6 +245,10 @@ class KNNSVM(NaiveSVM):
 
         n, d = X.shape
         C = float(self.C)
+
+        # Initialize and fit NearestNeighbors once
+        self.nn_ = NearestNeighbors(n_neighbors=self.k + 1, metric=self.metric)
+        self.nn_.fit(X)
 
         # Compute KNN-based weights
         w_i = self._compute_knn_weights(X, y_label)
