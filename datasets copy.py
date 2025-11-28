@@ -7,7 +7,7 @@ def precompute_class_stats(X_train, y_train, percentile=99):
     각 클래스별로:
       - mean (mu)
       - covariance (cov)
-      - Cholesky factor (L)  s.t. cov = L @ L.T
+      - inverse covariance (inv_cov)
       - Mahalanobis distance의 percentile-th threshold (tau)
     를 한 번씩만 계산해서 캐싱.
     """
@@ -19,28 +19,50 @@ def precompute_class_stats(X_train, y_train, percentile=99):
 
         mu = X_cls.mean(axis=0)
         cov = np.cov(X_cls.T) + np.eye(X_train.shape[1]) * 1e-6
-
-        L = np.linalg.cholesky(cov)
-
         inv_cov = np.linalg.inv(cov)
+
         diffs = X_cls - mu
         dists = np.einsum('ni,ij,nj->n', diffs, inv_cov, diffs)
+
         tau = np.percentile(dists, percentile)
 
         class_stats[cls] = {
             "mu": mu,
-            "L": L,
+            "cov": cov,
+            "inv_cov": inv_cov,
             "tau": tau,
         }
 
     return class_stats
 
 
-def inject_noise(X_train, y_train, feature_noise=0.0, label_noise=0.0, random_state=42, add_label_noise=False, epsilon=1e-3):
+def inject_noise(X_train, y_train, feature_noise=0.0, label_noise=0.0, random_state=42):
+    """
+    Injects Type I (feature) and Type II (label) outliers into X_train, y_train.
+    
+    Type I Outlier:
+        - For each class y, compute mean μ_y and covariance Σ_y.
+        - Generate points far from the class distribution using:
+              (x' - μ_y)^T Σ_y^{-1} (x' - μ_y) > τ
+        - τ is chosen as the 99th percentile of Mahalanobis distances.
+
+    Type II Outlier:
+        - Random label flips.
+
+    Parameters:
+        X_train (np.ndarray): Feature matrix
+        y_train (np.ndarray): Labels
+        feature_noise (float): Ratio of synthetic feature outliers
+        label_noise (float): Ratio of label flips
+        random_state (int): Seed for reproducibility
+
+    Returns:
+        X_noisy, y_noisy
+    """
+
     rng = default_rng(random_state)
     X = X_train.copy()
     y = y_train.copy()
-    d = X.shape[1]
 
     # ---------------------------------------------
     # 1. Type II Outliers (Label Noise)
@@ -50,33 +72,9 @@ def inject_noise(X_train, y_train, feature_noise=0.0, label_noise=0.0, random_st
         flip_indices = rng.choice(len(y), n_label_flips, replace=False)
         unique_labels = np.unique(y)
 
-        if add_label_noise is False:
-            for idx in flip_indices:
-                original = y[idx]
-                y[idx] = rng.choice(unique_labels[unique_labels != original])
-
-        else:
-            cov_feat = np.cov(X_train, rowvar=False) + np.eye(d) * 1e-12
-            feature_std = np.sqrt(np.diag(cov_feat))
-            new_X = []
-            new_y = []
-
-            for idx in flip_indices:
-                original_label = y[idx]
-                flipped_label = rng.choice(unique_labels[unique_labels != original_label])
-
-                base_noise = rng.standard_normal(size=d)
-                noise = epsilon * feature_std * base_noise
-                x_noisy = X[idx] + noise
-
-                new_X.append(x_noisy)
-                new_y.append(flipped_label)
-
-            new_X = np.vstack(new_X)
-            new_y = np.array(new_y)
-
-            X = np.vstack([X, new_X])
-            y = np.concatenate([y, new_y])
+        for idx in flip_indices:
+            original = y[idx]
+            y[idx] = rng.choice(unique_labels[unique_labels != original])
 
     # ---------------------------------------------
     # 2. Type I Outliers (Feature Noise)
@@ -89,28 +87,24 @@ def inject_noise(X_train, y_train, feature_noise=0.0, label_noise=0.0, random_st
         outlier_labels = []
 
         classes = np.array(list(class_stats.keys()))
-        d = X_train.shape[1]
 
         for _ in range(n_feature_outliers):
             cls = rng.choice(classes)
             stats = class_stats[cls]
             mu = stats["mu"]
-            L = stats["L"]
+            cov = stats["cov"]
+            inv_cov = stats["inv_cov"]
             tau = stats["tau"]
 
-            z = rng.standard_normal(size=d)
+            while True:
+                x_candidate = rng.multivariate_normal(mu, cov)
+                diff = x_candidate - mu
+                d = diff @ inv_cov @ diff  # Mahalanobis distance
 
-            mah_distance = np.dot(z, z)
-            E = rng.exponential(scale=tau / 2.0)
-            r2 = tau + E
-
-            scale = np.sqrt(r2 / (mah_distance + 1e-12))
-            z = z * scale
-
-            x_candidate = mu + L @ z
-
-            outliers.append(x_candidate)
-            outlier_labels.append(cls)
+                if d > tau:
+                    outliers.append(x_candidate)
+                    outlier_labels.append(cls)
+                    break
 
         outliers = np.array(outliers)
         outlier_labels = np.array(outlier_labels)
