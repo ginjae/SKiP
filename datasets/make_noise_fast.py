@@ -26,7 +26,7 @@ import matplotlib.patches as mpatches
 from matplotlib.colors import ListedColormap
 
 
-def precompute_class_stats(X_train_scaled, y_train, percentile=99):
+def precompute_class_stats(X_train_scaled, y_train, percentile=99, categorical_mask=None):
     """
     각 클래스별로 통계량을 미리 계산 (빠른 버전 - Cholesky 사용)
     
@@ -34,6 +34,7 @@ def precompute_class_stats(X_train_scaled, y_train, percentile=99):
         X_train_scaled: StandardScaler로 스케일된 학습 데이터
         y_train: 레이블
         percentile: Mahalanobis 거리 percentile threshold
+        categorical_mask: 카테고리 feature 마스크 (True: 카테고리, False: 연속형)
     
     Returns:
         class_stats: 클래스별 통계량 딕셔너리
@@ -41,25 +42,41 @@ def precompute_class_stats(X_train_scaled, y_train, percentile=99):
     class_stats = {}
     classes = np.unique(y_train)
     
+    # 연속형 feature만 선택
+    if categorical_mask is not None:
+        continuous_mask = ~categorical_mask
+    else:
+        continuous_mask = np.ones(X_train_scaled.shape[1], dtype=bool)
+    
     for cls in classes:
         X_cls = X_train_scaled[y_train == cls]
         
-        mu = X_cls.mean(axis=0)
-        cov = np.cov(X_cls.T) + np.eye(X_train_scaled.shape[1]) * 1e-6
+        # 연속형 feature에 대해서만 통계량 계산
+        X_cls_continuous = X_cls[:, continuous_mask]
+        
+        mu = X_cls_continuous.mean(axis=0)
+        cov = np.cov(X_cls_continuous.T) + np.eye(X_cls_continuous.shape[1]) * 1e-6
         
         # Cholesky 분해 추가 (빠른 생성용)
         L = np.linalg.cholesky(cov)
         
         # Mahalanobis 거리 계산용
         inv_cov = np.linalg.inv(cov)
-        diffs = X_cls - mu
+        diffs = X_cls_continuous - mu
         dists = np.einsum('ni,ij,nj->n', diffs, inv_cov, diffs)
         tau = np.percentile(dists, percentile)
+        
+        # 카테고리 feature의 평균값도 저장 (복사용)
+        if categorical_mask is not None:
+            mu_categorical = X_cls[:, categorical_mask].mean(axis=0)
+        else:
+            mu_categorical = None
         
         class_stats[cls] = {
             "mu": mu,
             "L": L,  # Cholesky factor 추가
             "tau": tau,
+            "mu_categorical": mu_categorical,
         }
     
     return class_stats
@@ -71,7 +88,8 @@ def generate_type1_noise_with_boundary(
     random_state=42,
     output_dir=".",
     dataset_name="dataset",
-    visualize=True
+    visualize=True,
+    categorical_mask=None
 ):
     """
     Type 1 feature noise를 생성하고 각 ratio별로 파일로 저장 (빠른 버전)
@@ -84,12 +102,20 @@ def generate_type1_noise_with_boundary(
         output_dir: 저장 디렉토리
         dataset_name: 데이터셋 이름
         visualize: 시각화 수행 여부
+        categorical_mask: 카테고리 feature 마스크 (True: 카테고리, False: 연속형)
     """
     rng = default_rng(random_state)
     N = len(X_train)
     d = X_train.shape[1]
     
-    print(f"원본 데이터: N={N}, d={d}")
+    # 카테고리 feature 정보 출력
+    if categorical_mask is not None:
+        n_categorical = np.sum(categorical_mask)
+        n_continuous = d - n_categorical
+        print(f"원본 데이터: N={N}, d={d} (연속형: {n_continuous}, 카테고리: {n_categorical})")
+        print(f"카테고리 feature는 노이즈에서 제외됩니다.")
+    else:
+        print(f"원본 데이터: N={N}, d={d}")
     print(f"목표 노이즈 비율: {[f'{r*100:.0f}%' for r in ratios]}")
     print("-" * 60)
     
@@ -107,7 +133,7 @@ def generate_type1_noise_with_boundary(
     
     # 3. 클래스별 통계량 계산
     print("3. 클래스별 통계량 계산...")
-    class_stats = precompute_class_stats(X_train_scaled, y_train, percentile=99)
+    class_stats = precompute_class_stats(X_train_scaled, y_train, percentile=99, categorical_mask=categorical_mask)
     classes = np.array(list(class_stats.keys()))
     print(f"   클래스 개수: {len(classes)}")
     
@@ -142,9 +168,16 @@ def generate_type1_noise_with_boundary(
         mu = stats["mu"]
         L = stats["L"]
         tau = stats["tau"]
+        mu_categorical = stats["mu_categorical"]
+        
+        # 연속형 feature 차원 수
+        if categorical_mask is not None:
+            d_continuous = np.sum(~categorical_mask)
+        else:
+            d_continuous = d
         
         # 빠른 방식: Cholesky + radial scaling으로 Mahalanobis 99% 밖 샘플 생성
-        z = rng.standard_normal(size=d)
+        z = rng.standard_normal(size=d_continuous)
         
         mah_distance = np.dot(z, z)
         E = rng.exponential(scale=2 / tau)
@@ -153,7 +186,17 @@ def generate_type1_noise_with_boundary(
         scale = np.sqrt(r2 / (mah_distance + 1e-12))
         z = z * scale
         
-        x_candidate_scaled = mu + L @ z
+        # 연속형 feature에만 노이즈 적용
+        x_candidate_continuous = mu + L @ z
+        
+        # 전체 feature 벡터 구성
+        if categorical_mask is not None:
+            x_candidate_scaled = np.zeros(d)
+            x_candidate_scaled[~categorical_mask] = x_candidate_continuous
+            # 카테고리 feature는 해당 클래스의 평균값 사용 (반올림하여 0 or 1)
+            x_candidate_scaled[categorical_mask] = np.round(mu_categorical)
+        else:
+            x_candidate_scaled = x_candidate_continuous
         
         attempt_count += 1
         
@@ -658,6 +701,15 @@ def main():
             # 노이즈 생성 및 저장 (같은 폴더에 저장)
             output_dir = npz_path.parent
             
+            # Titanic 데이터셋의 경우 카테고리 feature 마스크 생성
+            categorical_mask = None
+            if dataset_name == "titanic":
+                # Titanic features: Pclass, Age, SibSp, Parch, Fare, Sex_male, Embarked_Q, Embarked_S
+                # 마지막 3개 feature가 one-hot encoded categorical features
+                categorical_mask = np.zeros(X_train.shape[1], dtype=bool)
+                categorical_mask[-3:] = True  # Sex_male, Embarked_Q, Embarked_S
+                print(f"Titanic 데이터셋 감지: 카테고리 feature (indices {np.where(categorical_mask)[0].tolist()})는 노이즈에서 제외됩니다.")
+            
             generate_type1_noise_with_boundary(
                 X_train=X_train,
                 y_train=y_train,
@@ -665,7 +717,8 @@ def main():
                 random_state=args.seed,
                 output_dir=output_dir,
                 dataset_name=dataset_name,
-                visualize=not args.no_vis
+                visualize=not args.no_vis,
+                categorical_mask=categorical_mask
             )
             
             print(f"\n✓ {dataset_name} 완료!\n")
