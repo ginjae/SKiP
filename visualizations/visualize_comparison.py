@@ -5,15 +5,14 @@ import matplotlib.ticker as mticker
 import os
 
 # Create output directories for visualizations
-output_dir = 'visualizations'
-comparison_dir = os.path.join(output_dir, 'comparison')
+comparison_dir = 'comparison'
 comparison_pdf_dir = os.path.join(comparison_dir, 'pdf')
 
 os.makedirs(comparison_dir, exist_ok=True)
 os.makedirs(comparison_pdf_dir, exist_ok=True)
 
 # Load the CSV file
-df_all_results = pd.read_csv('model_comparison_results.csv')
+df_all_results = pd.read_csv('../results/model_comparison_results.csv')
 
 target_models = ['NaiveSVM', 'SKiP-average']
 df_skip = df_all_results[df_all_results['Model'].isin(target_models)]

@@ -1,22 +1,20 @@
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-import matplotlib.patheffects as path_effects
 import os
 import argparse
 
 def create_heatmaps(selected_models):
     # Create output directories for visualizations
-    output_dir = 'visualizations'
-    heatmap_dir = os.path.join(output_dir, 'noise_heatmap_selected')
+    heatmap_dir = 'noise_heatmap_selected'
     heatmap_pdf_dir = os.path.join(heatmap_dir, 'pdf')
 
     os.makedirs(heatmap_dir, exist_ok=True)
     os.makedirs(heatmap_pdf_dir, exist_ok=True)
 
     # Load the CSV files
-    df_all_results = pd.read_csv('model_comparison_results.csv')
-    df_baseline_results = pd.read_csv('baseline_comparison_results.csv')
+    df_all_results = pd.read_csv('../results/model_comparison_results.csv')
+    df_baseline_results = pd.read_csv('../results/baseline_comparison_results.csv')
 
     # Create heatmaps for each dataset showing noise impact on selected model performance
     for dataset_name in ['breast_cancer', 'breast_cancer_pca', 'iris', 'iris_pca', 'titanic', 'titanic_pca', 'wine', 'wine_pca']:

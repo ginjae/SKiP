@@ -194,9 +194,8 @@ def run_experiment_and_visualize():
     print("="*70)
     
     # Create output directories
-    os.makedirs('visualizations', exist_ok=True)
-    os.makedirs('visualizations/decision_boundary', exist_ok=True)
-    os.makedirs('visualizations/decision_boundary/pdf', exist_ok=True)
+    os.makedirs('decision_boundary', exist_ok=True)
+    os.makedirs('decision_boundary/pdf', exist_ok=True)
     
     # Configuration
     noise_configs = [
@@ -330,8 +329,8 @@ def run_experiment_and_visualize():
     plt.tight_layout()
     
     # Save figures
-    png_path = 'visualizations/decision_boundary/decision_boundary_iris_pca.png'
-    pdf_path = 'visualizations/decision_boundary/pdf/decision_boundary_iris_pca.pdf'
+    png_path = 'decision_boundary/decision_boundary_iris_pca.png'
+    pdf_path = 'decision_boundary/pdf/decision_boundary_iris_pca.pdf'
     
     plt.savefig(png_path, dpi=300, bbox_inches='tight')
     print(f"✓ Saved: {png_path}")

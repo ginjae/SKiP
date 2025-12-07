@@ -379,7 +379,7 @@ def main():
     print(f"Label noise levels: {df_all_results['Label_Noise'].nunique()}")
 
     # Save results to CSV
-    output_filename = 'model_comparison_results.csv'
+    output_filename = 'results/model_comparison_results.csv'
     df_all_results.to_csv(output_filename, index=False)
     print(f"\n✓ Results saved to {output_filename}")
 

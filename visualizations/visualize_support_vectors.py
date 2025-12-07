@@ -290,8 +290,8 @@ def run_experiment():
     df['SV_Ratio'] = df['Support_Vectors'] / df['Train_Size']
     
     # Save results
-    df.to_csv('support_vector_comparison.csv', index=False)
-    print(f"\n✓ Results saved to support_vector_comparison.csv")
+    df.to_csv('../results/support_vector_comparison.csv', index=False)
+    print(f"\n✓ Results saved to ../results/support_vector_comparison.csv")
     
     return df
 
@@ -308,9 +308,8 @@ def visualize_results(df):
     print("="*70)
     
     # Create directories if they don't exist
-    os.makedirs('visualizations', exist_ok=True)
-    os.makedirs('visualizations/support_vector', exist_ok=True)
-    os.makedirs('visualizations/support_vector/pdf', exist_ok=True)
+    os.makedirs('support_vector', exist_ok=True)
+    os.makedirs('support_vector/pdf', exist_ok=True)
     
     # Set style
     plt.rcParams['figure.figsize'] = (16, 12)
@@ -382,12 +381,12 @@ def visualize_results(df):
     plt.tight_layout()
     
     # Save PNG
-    plt.savefig('visualizations/support_vector/support_vector_comparison.png', dpi=300, bbox_inches='tight')
-    print("✓ Saved: visualizations/support_vector/support_vector_comparison.png")
+    plt.savefig('support_vector/support_vector_comparison.png', dpi=300, bbox_inches='tight')
+    print("✓ Saved: support_vector/support_vector_comparison.png")
     
     # Save PDF
-    plt.savefig('visualizations/support_vector/pdf/support_vector_comparison.pdf', bbox_inches='tight')
-    print("✓ Saved: visualizations/support_vector/pdf/support_vector_comparison.pdf")
+    plt.savefig('support_vector/pdf/support_vector_comparison.pdf', bbox_inches='tight')
+    print("✓ Saved: support_vector/pdf/support_vector_comparison.pdf")
     
     plt.close('all')
     
@@ -395,7 +394,7 @@ def visualize_results(df):
     print("VISUALIZATION COMPLETE")
     print("="*70)
     print("\nGenerated files:")
-    print("  - support_vector_comparison.csv")
+    print("  - ../results/support_vector_comparison.csv")
     print("  - visualizations/support_vector_comparison.png")
     print("  - visualizations/pdf/support_vector_comparison.pdf")
 
@@ -443,12 +442,12 @@ def print_summary_statistics(df):
 def main():
     """Main function"""
     # Check if results file already exists
-    if os.path.exists('support_vector_comparison.csv'):
+    if os.path.exists('../results/support_vector_comparison.csv'):
         print("="*70)
         print("EXISTING RESULTS FOUND")
         print("="*70)
-        print("\nLoading results from support_vector_comparison.csv...")
-        df = pd.read_csv('support_vector_comparison.csv')
+        print("\nLoading results from ../results/support_vector_comparison.csv...")
+        df = pd.read_csv('../results/support_vector_comparison.csv')
         print(f"Loaded {len(df)} experiment results.")
     else:
         # Run experiment
