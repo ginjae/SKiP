@@ -4,11 +4,14 @@ Small-scale experiment to compare number of support vectors between models
 """
 
 import os
+import sys
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
+
+sys.path.insert(0, '..')  # Add parent directory to path
 from datasets import inject_noise
 from models.svm_models import NaiveSVM, ProbSVM, KNNSVM, SKiP
 from models.multi_svm import OneVsRestSVM
@@ -19,75 +22,75 @@ warnings.filterwarnings('ignore')
 # Dataset configurations
 datasets_config = {
     'breast_cancer': {
-        'clean': 'datasets/breast_cancer/breast_cancer.npz',
+        'clean': '../datasets/breast_cancer/breast_cancer.npz',
         'noisy': {
-            '5%': 'datasets/breast_cancer/fast_breast_cancer_type1_boundary_5pct.npz',
-            '10%': 'datasets/breast_cancer/fast_breast_cancer_type1_boundary_10pct.npz',
-            '15%': 'datasets/breast_cancer/fast_breast_cancer_type1_boundary_15pct.npz',
-            '20%': 'datasets/breast_cancer/fast_breast_cancer_type1_boundary_20pct.npz',
+            '5%': '../datasets/breast_cancer/fast_breast_cancer_type1_boundary_5pct.npz',
+            '10%': '../datasets/breast_cancer/fast_breast_cancer_type1_boundary_10pct.npz',
+            '15%': '../datasets/breast_cancer/fast_breast_cancer_type1_boundary_15pct.npz',
+            '20%': '../datasets/breast_cancer/fast_breast_cancer_type1_boundary_20pct.npz',
         }
     },
     'breast_cancer_pca': {
-        'clean': 'datasets/breast_cancer_pca/breast_cancer_pca.npz',
+        'clean': '../datasets/breast_cancer_pca/breast_cancer_pca.npz',
         'noisy': {
-            '5%': 'datasets/breast_cancer_pca/fast_breast_cancer_pca_type1_boundary_5pct.npz',
-            '10%': 'datasets/breast_cancer_pca/fast_breast_cancer_pca_type1_boundary_10pct.npz',
-            '15%': 'datasets/breast_cancer_pca/fast_breast_cancer_pca_type1_boundary_15pct.npz',
-            '20%': 'datasets/breast_cancer_pca/fast_breast_cancer_pca_type1_boundary_20pct.npz',
+            '5%': '../datasets/breast_cancer_pca/fast_breast_cancer_pca_type1_boundary_5pct.npz',
+            '10%': '../datasets/breast_cancer_pca/fast_breast_cancer_pca_type1_boundary_10pct.npz',
+            '15%': '../datasets/breast_cancer_pca/fast_breast_cancer_pca_type1_boundary_15pct.npz',
+            '20%': '../datasets/breast_cancer_pca/fast_breast_cancer_pca_type1_boundary_20pct.npz',
         }
     },
     'iris': {
-        'clean': 'datasets/iris/iris.npz',
+        'clean': '../datasets/iris/iris.npz',
         'noisy': {
-            '5%': 'datasets/iris/fast_iris_type1_boundary_5pct.npz',
-            '10%': 'datasets/iris/fast_iris_type1_boundary_10pct.npz',
-            '15%': 'datasets/iris/fast_iris_type1_boundary_15pct.npz',
-            '20%': 'datasets/iris/fast_iris_type1_boundary_20pct.npz',
+            '5%': '../datasets/iris/fast_iris_type1_boundary_5pct.npz',
+            '10%': '../datasets/iris/fast_iris_type1_boundary_10pct.npz',
+            '15%': '../datasets/iris/fast_iris_type1_boundary_15pct.npz',
+            '20%': '../datasets/iris/fast_iris_type1_boundary_20pct.npz',
         }
     },
     'iris_pca': {
-        'clean': 'datasets/iris_pca/iris_pca.npz',
+        'clean': '../datasets/iris_pca/iris_pca.npz',
         'noisy': {
-            '5%': 'datasets/iris_pca/fast_iris_pca_type1_boundary_5pct.npz',
-            '10%': 'datasets/iris_pca/fast_iris_pca_type1_boundary_10pct.npz',
-            '15%': 'datasets/iris_pca/fast_iris_pca_type1_boundary_15pct.npz',
-            '20%': 'datasets/iris_pca/fast_iris_pca_type1_boundary_20pct.npz',
+            '5%': '../datasets/iris_pca/fast_iris_pca_type1_boundary_5pct.npz',
+            '10%': '../datasets/iris_pca/fast_iris_pca_type1_boundary_10pct.npz',
+            '15%': '../datasets/iris_pca/fast_iris_pca_type1_boundary_15pct.npz',
+            '20%': '../datasets/iris_pca/fast_iris_pca_type1_boundary_20pct.npz',
         }
     },
     'titanic': {
-        'clean': 'datasets/titanic/titanic.npz',
+        'clean': '../datasets/titanic/titanic.npz',
         'noisy': {
-            '5%': 'datasets/titanic/fast_titanic_type1_boundary_5pct.npz',
-            '10%': 'datasets/titanic/fast_titanic_type1_boundary_10pct.npz',
-            '15%': 'datasets/titanic/fast_titanic_type1_boundary_15pct.npz',
-            '20%': 'datasets/titanic/fast_titanic_type1_boundary_20pct.npz',
+            '5%': '../datasets/titanic/fast_titanic_type1_boundary_5pct.npz',
+            '10%': '../datasets/titanic/fast_titanic_type1_boundary_10pct.npz',
+            '15%': '../datasets/titanic/fast_titanic_type1_boundary_15pct.npz',
+            '20%': '../datasets/titanic/fast_titanic_type1_boundary_20pct.npz',
         }
     },
     'titanic_pca': {
-        'clean': 'datasets/titanic_pca/titanic_pca.npz',
+        'clean': '../datasets/titanic_pca/titanic_pca.npz',
         'noisy': {
-            '5%': 'datasets/titanic_pca/fast_titanic_pca_type1_boundary_5pct.npz',
-            '10%': 'datasets/titanic_pca/fast_titanic_pca_type1_boundary_10pct.npz',
-            '15%': 'datasets/titanic_pca/fast_titanic_pca_type1_boundary_15pct.npz',
-            '20%': 'datasets/titanic_pca/fast_titanic_pca_type1_boundary_20pct.npz',
+            '5%': '../datasets/titanic_pca/fast_titanic_pca_type1_boundary_5pct.npz',
+            '10%': '../datasets/titanic_pca/fast_titanic_pca_type1_boundary_10pct.npz',
+            '15%': '../datasets/titanic_pca/fast_titanic_pca_type1_boundary_15pct.npz',
+            '20%': '../datasets/titanic_pca/fast_titanic_pca_type1_boundary_20pct.npz',
         }
     },
     'wine': {
-        'clean': 'datasets/wine/wine.npz',
+        'clean': '../datasets/wine/wine.npz',
         'noisy': {
-            '5%': 'datasets/wine/fast_wine_type1_boundary_5pct.npz',
-            '10%': 'datasets/wine/fast_wine_type1_boundary_10pct.npz',
-            '15%': 'datasets/wine/fast_wine_type1_boundary_15pct.npz',
-            '20%': 'datasets/wine/fast_wine_type1_boundary_20pct.npz',
+            '5%': '../datasets/wine/fast_wine_type1_boundary_5pct.npz',
+            '10%': '../datasets/wine/fast_wine_type1_boundary_10pct.npz',
+            '15%': '../datasets/wine/fast_wine_type1_boundary_15pct.npz',
+            '20%': '../datasets/wine/fast_wine_type1_boundary_20pct.npz',
         }
     },
     'wine_pca': {
-        'clean': 'datasets/wine_pca/wine_pca.npz',
+        'clean': '../datasets/wine_pca/wine_pca.npz',
         'noisy': {
-            '5%': 'datasets/wine_pca/fast_wine_pca_type1_boundary_5pct.npz',
-            '10%': 'datasets/wine_pca/fast_wine_pca_type1_boundary_10pct.npz',
-            '15%': 'datasets/wine_pca/fast_wine_pca_type1_boundary_15pct.npz',
-            '20%': 'datasets/wine_pca/fast_wine_pca_type1_boundary_20pct.npz',
+            '5%': '../datasets/wine_pca/fast_wine_pca_type1_boundary_5pct.npz',
+            '10%': '../datasets/wine_pca/fast_wine_pca_type1_boundary_10pct.npz',
+            '15%': '../datasets/wine_pca/fast_wine_pca_type1_boundary_15pct.npz',
+            '20%': '../datasets/wine_pca/fast_wine_pca_type1_boundary_20pct.npz',
         }
     }
 }

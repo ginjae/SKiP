@@ -4,11 +4,14 @@ Visualizes decision boundaries for NaiveSVM and SKiP-average models
 """
 
 import os
+import sys
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
+
+sys.path.insert(0, '..')  # Add parent directory to path
 from datasets import inject_noise
 from models.svm_models import NaiveSVM, SKiP
 from models.multi_svm import OneVsRestSVM
@@ -18,12 +21,12 @@ warnings.filterwarnings('ignore')
 
 # Dataset configuration
 dataset_config = {
-    'clean': 'datasets/iris_pca/iris_pca.npz',
+    'clean': '../datasets/iris_pca/iris_pca.npz',
     'noisy': {
-        '5%': 'datasets/iris_pca/fast_iris_pca_type1_boundary_5pct.npz',
-        '10%': 'datasets/iris_pca/fast_iris_pca_type1_boundary_10pct.npz',
-        '15%': 'datasets/iris_pca/fast_iris_pca_type1_boundary_15pct.npz',
-        '20%': 'datasets/iris_pca/fast_iris_pca_type1_boundary_20pct.npz',
+        '5%': '../datasets/iris_pca/fast_iris_pca_type1_boundary_5pct.npz',
+        '10%': '../datasets/iris_pca/fast_iris_pca_type1_boundary_10pct.npz',
+        '15%': '../datasets/iris_pca/fast_iris_pca_type1_boundary_15pct.npz',
+        '20%': '../datasets/iris_pca/fast_iris_pca_type1_boundary_20pct.npz',
     }
 }
 
